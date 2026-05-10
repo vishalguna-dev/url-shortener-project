@@ -7,6 +7,6 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 
 public interface ShortUrlRepository extends JpaRepository<ShortUrl,Long>{
-@Query("select s from ShortUrl s where s.isPrivate = false order by s.createdAt desc ")
+@Query("select s from ShortUrl s left join fetch s.createdBy where s.isPrivate = false order by s.createdAt desc ")
 List<ShortUrl> findPublicShortUrls();
 }

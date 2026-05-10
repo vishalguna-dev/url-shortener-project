@@ -23,7 +23,7 @@ public class ShortUrl {
 
     private Instant expiresAt;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private User createdBy;
 
