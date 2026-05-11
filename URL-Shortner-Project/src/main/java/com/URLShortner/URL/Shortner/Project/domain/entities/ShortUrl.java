@@ -67,14 +67,6 @@ public class ShortUrl {
         this.expiresAt = expiresAt;
     }
 
-    public Boolean getPrivate() {
-        return isPrivate;
-    }
-
-    public void setPrivate(Boolean aPrivate) {
-        isPrivate = aPrivate;
-    }
-
     public String getOriginalUrl() {
         return originalUrl;
     }
@@ -97,5 +89,13 @@ public class ShortUrl {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Boolean getPrivate() {
+        return isPrivate;
+    }
+
+    public void setPrivate(Boolean aPrivate) {
+        isPrivate = aPrivate;
     }
 }
