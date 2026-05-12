@@ -1,23 +1,75 @@
 package com.URLShortner.URL.Shortner.Project.domain.services;
 
+import com.URLShortner.URL.Shortner.Project.ApplicationProperties;
 import com.URLShortner.URL.Shortner.Project.domain.entities.ShortUrl;
+import com.URLShortner.URL.Shortner.Project.domain.models.CreateShortUrlCmd;
 import com.URLShortner.URL.Shortner.Project.domain.models.ShortUrlDto;
 import com.URLShortner.URL.Shortner.Project.domain.repositories.ShortUrlRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
+import java.time.Instant;
 import java.util.List;
+
+import static java.time.temporal.ChronoUnit.DAYS;
+
 @Service
 public class ShortUrlService {
     private final ShortUrlRepository shortUrlRepository;
     private final EntityMapper entityMapper;
+    private final ApplicationProperties applicationProperties;
 
-    public ShortUrlService(ShortUrlRepository shortUrlRepository, EntityMapper entityMapper) {
+    public ShortUrlService(ShortUrlRepository shortUrlRepository, EntityMapper entityMapper, ApplicationProperties applicationProperties) {
         this.shortUrlRepository = shortUrlRepository;
         this.entityMapper = entityMapper;
+        this.applicationProperties = applicationProperties;
     }
 
     public List<ShortUrlDto> findAllPublicShortUrls() {
         return shortUrlRepository.findPublicShortUrls()
                 .stream().map(entityMapper::toShortUrlDto).toList();
     }
+
+    @Transactional
+    public ShortUrlDto createShortUrl(CreateShortUrlCmd cmd) {
+        if(applicationProperties.validateOriginalUrl()) {
+            boolean urlExists = UrlExistenceValidator.isUrlExists(cmd.originalUrl());
+            if(!urlExists) {
+                throw new RuntimeException("Invalid URL "+cmd.originalUrl());
+            }
+        }
+        var shortKey = generateUniqueShortKey();
+        var shortUrl = new ShortUrl();
+        shortUrl.setOriginalUrl(cmd.originalUrl());
+        shortUrl.setShortKey(shortKey);
+        shortUrl.setCreatedBy(null);
+        shortUrl.setPrivate(false);
+        shortUrl.setClickCount(0L);
+        shortUrl.setExpiresAt(Instant.now().plus(applicationProperties.defaultExpiryInDays(),java.time.temporal.ChronoUnit.DAYS));
+        shortUrl.setCreatedAt(Instant.now());
+        shortUrlRepository.save(shortUrl);
+        return entityMapper.toShortUrlDto(shortUrl);
+    }
+
+    private String generateUniqueShortKey() {
+        String shortKey;
+        do {
+            shortKey = generateRandomShortKey();
+        } while (shortUrlRepository.existsByShortKey(shortKey));
+        return shortKey;
+    }
+
+    private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private static final int SHORT_KEY_LENGTH = 6;
+    private static final SecureRandom RANDOM = new SecureRandom();
+
+    public static String generateRandomShortKey() {
+        StringBuilder sb = new StringBuilder(SHORT_KEY_LENGTH);
+        for (int i = 0; i < SHORT_KEY_LENGTH; i++) {
+            sb.append(CHARACTERS.charAt(RANDOM.nextInt(CHARACTERS.length())));
+        }
+        return sb.toString();
+    }
+
 }
